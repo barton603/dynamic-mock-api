@@ -1,6 +1,6 @@
 {
   "name": "dynamic-mock-api",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "A Node module for creating a dynamic mock (express) API on the fly. Allows users to monitor requests to the API. Works well with browser driven UI testing.",
   "main": "index.js",
   "scripts": {

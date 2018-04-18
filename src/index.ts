@@ -357,29 +357,42 @@ function findDuplicateSymbol(a: any, b: any): string {
 }
 
 function getRouteGlobs(): string[] {
-    let config: any;
-    
+    let globs: string[] = [];
+
     let cmdArg: string = process.argv.find((a) => a.startsWith("--promMocks="));
     if (cmdArg) {
-        let globs = cmdArg.split("=")[1].split(",");
-        return globs.map((g) => {
+        let globArgs = cmdArg.split("=")[1].split(",");
+        globs.push(...globArgs.map((g) => {
             return g = g.replace(/^[\'\"]+|[\'\"]+$/g, "");
-        });
+        }));
     }
-    // Else check for a protractor cli config file.
-    else if (process.argv.length >= 2 && fs.existsSync(process.argv[2])) {
-        config = require(path.join(process.cwd(), process.argv[2])).config;
+    // check for a protractor cli config file.
+    if (process.argv.length >= 2 && fs.existsSync(process.argv[2])) {
+        let config = require(path.join(process.cwd(), process.argv[2])).config;
+        if (config && config.prom && config.prom.mocks && config.prom.mocks[0]) {
+            globs.push(...config.prom.mocks);
+        }
     } 
-    // Else check if there is protractor.conf.js file.
-    else if (fs.existsSync('./protractor.conf.js')) {
-        config = require(path.join(process.cwd(), './protractor.conf.js')).config;
+    // check if there is protractor.conf.js file.
+    if (fs.existsSync('./protractor.conf.js')) {
+        let config = require(path.join(process.cwd(), './protractor.conf.js')).config;
+        if (config && config.prom && config.prom.mocks && config.prom.mocks[0]) {
+            globs.push(...config.prom.mocks);
+        }
+    }
+    // check for apiMock.conf.js
+    if (fs.existsSync('./apiMock.conf.js')) {
+        let config = require(path.join(process.cwd(), 'apiMock.conf.js')).config;
+        if (config && config.prom && config.prom.mocks && config.prom.mocks[0]) {
+            globs.push(...config.prom.mocks);
+        }
     }
 
-    if (config && config.prom && config.prom.mocks && config.prom.mocks[0]) {
-        return config.prom.mocks;
+    if (globs.length === 0) {
+        throw Error("No mock routes have been provided. Use --promMocks=<,glob> to provide mock routes.");
     }
-
-    throw Error("No mock routes have been provided. Use --promMocks=<,glob> to provide mock routes.");
+    
+    return globs;
 }
 
 function createGlobError(cwd: string , globs: string[]): string {

@@ -2,7 +2,7 @@
   "name": "dynamic-mock-api",
   "version": "0.1.0",
   "description": "A Node module for creating a dynamic mock (express) API on the fly. Allows users to monitor requests to the API. Works well with browser driven UI testing.",
-  "main": "index.js",
+  "main": "build/lib/index.js",
   "scripts": {
     "test": "mocha --exit",
     "build": "tsc"
@@ -10,6 +10,10 @@
   "engines": {
     "node": ">=8.0.0"
   },
+  "files": [
+    "build/lib/*",
+    "package-lock.json"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/barton603/dynamic-mock-api.git"
@@ -31,6 +35,7 @@
   "bugs": {
     "url": "https://github.com/barton603/dynamic-mock-api/issues"
   },
+
   "homepage": "https://github.com/barton603/dynamic-mock-api#readme",
   "dependencies": {
     "cookie-parser": "^1.4.3",

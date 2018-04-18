@@ -7,8 +7,6 @@ install:
   - npm install
   - npm install typescript -g
 
-build:
-  - npm run-script build
-
 script:
+  - npm run-script build
   - npm test

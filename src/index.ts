@@ -384,8 +384,20 @@ function readConfigFiles() {
         let mergedConfig: any = {};
         // check for a protractor cli config file.
         if (process.argv.length >= 2 && fs.existsSync(process.argv[2])) {
-            let config = require(path.join(process.cwd(), process.argv[2])).config;
+            let file: string;
+            if (path.isAbsolute(process.argv[2])) {
+                file = process.argv[2]
+            } else {
+                file = path.join(process.cwd(), process.argv[2])
+            }
+        
+            let config = require(file).config;
+        
             if (config && config.prom) {
+                if (path.isAbsolute(process.argv[2]) && config.prom.mocks) {
+                    config.prom.mocks = config.prom.mocks.map((m: string) => path.join(path.dirname(process.argv[2]), m));
+                }
+
                 mergedConfig = Object.assign(config, mergedConfig);
             }
         } 

@@ -170,6 +170,12 @@ class Prom implements IProm {
 }
 
 /*
+ * Initialize config
+ */
+
+const config = getPromConfig();
+
+/*
  * Setup of the express Mock API.
  */
 
@@ -183,7 +189,6 @@ app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
-app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('', mockRouter);
 
@@ -208,7 +213,7 @@ app.use(function(err: any, req: express.Request,
  * Get port from environment and store in Express.
  */
 
-var port = normalizePort(process.env.PORT || '3000');
+var port = normalizePort(process.env.PORT || config.prom.port);
 app.set('port', port);
 
 /**
@@ -287,11 +292,14 @@ function onListening() {
 
 function setupMockRoutes(prom: Prom) {
   const router = express.Router();
-  const routeGlobs = getRouteGlobs();
-  const routeModules: any = requireGlob.sync(routeGlobs, {cwd: process.cwd(), reducer: flattenFiles}) || {};
+  if (config.prom.mocks.length === 0) {
+    throw Error("No mock routes have been provided. Use --promMocks=<,glob> to provide mock routes.");
+  }
+
+  const routeModules: any = requireGlob.sync(config.prom.mocks, {cwd: process.cwd(), reducer: flattenFiles}) || {};
 
   if (Object.keys(routeModules).length === 0) {
-    throw Error("No modules found at " + createGlobError(process.cwd(), routeGlobs));
+    throw Error("No modules found at " + createGlobError(process.cwd(), config.prom.mocks));
   }
 
   const mockRoutes: any = {};
@@ -356,43 +364,53 @@ function findDuplicateSymbol(a: any, b: any): string {
     return bKeys.find((key) => a[key]);
 }
 
-function getRouteGlobs(): string[] {
-    let globs: string[] = [];
+function getPromConfig(): any {
+    let config = readConfigFiles();
+
+    applyConfigDefaults(config);
 
     let cmdArg: string = process.argv.find((a) => a.startsWith("--promMocks="));
     if (cmdArg) {
         let globArgs = cmdArg.split("=")[1].split(",");
-        globs.push(...globArgs.map((g) => {
+        config.prom.mocks.push(...globArgs.map((g) => {
             return g = g.replace(/^[\'\"]+|[\'\"]+$/g, "");
         }));
     }
-    // check for a protractor cli config file.
-    if (process.argv.length >= 2 && fs.existsSync(process.argv[2])) {
-        let config = require(path.join(process.cwd(), process.argv[2])).config;
-        if (config && config.prom && config.prom.mocks && config.prom.mocks[0]) {
-            globs.push(...config.prom.mocks);
-        }
-    } 
-    // check if there is protractor.conf.js file.
-    if (fs.existsSync('./protractor.conf.js')) {
-        let config = require(path.join(process.cwd(), './protractor.conf.js')).config;
-        if (config && config.prom && config.prom.mocks && config.prom.mocks[0]) {
-            globs.push(...config.prom.mocks);
-        }
-    }
-    // check for apiMock.conf.js
-    if (fs.existsSync('./apiMock.conf.js')) {
-        let config = require(path.join(process.cwd(), 'apiMock.conf.js')).config;
-        if (config && config.prom && config.prom.mocks && config.prom.mocks[0]) {
-            globs.push(...config.prom.mocks);
-        }
-    }
 
-    if (globs.length === 0) {
-        throw Error("No mock routes have been provided. Use --promMocks=<,glob> to provide mock routes.");
-    }
-    
-    return globs;
+    return config;
+}
+
+function readConfigFiles() {
+        let mergedConfig: any = {};
+        // check for a protractor cli config file.
+        if (process.argv.length >= 2 && fs.existsSync(process.argv[2])) {
+            let config = require(path.join(process.cwd(), process.argv[2])).config;
+            if (config && config.prom) {
+                mergedConfig = Object.assign(config, mergedConfig);
+            }
+        } 
+        // check if there is protractor.conf.js file.
+        if (fs.existsSync('./protractor.conf.js')) {
+            let config = require(path.join(process.cwd(), './protractor.conf.js')).config;
+            if (config && config.prom) {
+                mergedConfig = Object.assign(config, mergedConfig);
+            }
+        }
+        // check for apiMock.conf.js
+        if (fs.existsSync('./apiMock.conf.js')) {
+            let config = require(path.join(process.cwd(), 'apiMock.conf.js')).config;
+            if (config && config.prom) {
+                mergedConfig = Object.assign(config, mergedConfig);
+            }
+        }
+
+        return mergedConfig;
+}
+
+function applyConfigDefaults(config: any) {
+    config.prom = config.prom || {};
+    config.prom.mocks = config.prom.mocks || [];
+    config.prom.port = config.prom.port || '3000';
 }
 
 function createGlobError(cwd: string , globs: string[]): string {
